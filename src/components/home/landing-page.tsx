@@ -1,13 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import {
   ArrowDownRight,
   ArrowRight,
+  CalendarDays,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Crown,
+  MapPin,
   Menu,
   Search,
   Smile,
@@ -706,6 +710,12 @@ function HowItWorks() {
 }
 
 function Featured() {
+  const filters = ["All Events", "Concert", "Running", "Conference", "Workshop", "Festival"] as const;
+  const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>("All Events");
+  const visibleCategories = activeFilter === "All Events"
+    ? categories.slice(0, 4)
+    : categories.filter(({ name }) => name.includes(activeFilter));
+
   return (
     <section id="featured" className="section featured-section">
       <Container>
@@ -718,12 +728,17 @@ function Featured() {
           />
           <div className="featured-controls">
             <div className="filter-list">
-              <span className="active">All Events</span>
-              <span>Concert</span>
-              <span>Running</span>
-              <span>Conference</span>
-              <span>Workshop</span>
-              <span>Festival</span>
+              {filters.map((filter) => (
+                <button
+                  type="button"
+                  className={activeFilter === filter ? "active" : undefined}
+                  aria-pressed={activeFilter === filter}
+                  onClick={() => setActiveFilter(filter)}
+                  key={filter}
+                >
+                  {filter}
+                </button>
+              ))}
             </div>
             <OutlineButton href="#events" size="sm">
               View All Events <ArrowRight size={16} />
@@ -731,7 +746,7 @@ function Featured() {
           </div>
         </div>
         <div className="event-grid">
-          {categories.slice(0, 4).map(({ name, tone, icon: Icon }) => (
+          {visibleCategories.map(({ name, tone, icon: Icon }) => (
             <article className="event-tile" key={name}>
               <PhotoPlaceholder label={name} tone={tone} />
               <div className="event-tile__info">
@@ -763,25 +778,110 @@ function Featured() {
 }
 
 function SocialProof() {
+  const reviews = [
+    {
+      name: "Dimas Setiawan",
+      initials: "DS",
+      quote: "Proses pembuatan undangan digitalnya sangat mudah dan hasilnya premium. Tamu juga suka bisa langsung upload foto dari acara.",
+      event: "The Wedding of Aldi & Sinta",
+      date: "12 Oct 2026",
+      location: "Jakarta, Indonesia",
+      tone: "wedding",
+    },
+    {
+      name: "Nadia Putri",
+      initials: "NP",
+      quote: "Fitur photo sharing-nya benar-benar membantu mengumpulkan semua momen dari tamu. Setting-nya gampang dan support-nya responsif banget.",
+      event: "Jakarta Music Festival 2026",
+      date: "20 Aug 2026",
+      location: "GBK, Jakarta",
+      tone: "concert",
+    },
+    {
+      name: "Rizky Maulana",
+      initials: "RM",
+      quote: "Sistem tiketnya rapi, proses check-in jadi lebih cepat, dan tamu sangat terbantu dengan QR. Recommended banget untuk event besar maupun kecil.",
+      event: "Tech Summit Indonesia 2026",
+      date: "28 Oct 2026",
+      location: "ICE BSD, Tangerang",
+      tone: "conference",
+    },
+    {
+      name: "Sari Lestari",
+      initials: "SL",
+      quote: "Desain undangannya keren dan banyak pilihan. Timnya juga sangat membantu dari awal sampai hari acara.",
+      event: "Garden Party",
+      date: "15 Jun 2026",
+      location: "Bandung",
+      tone: "garden",
+    },
+  ] as const;
+  const [activeReview, setActiveReview] = useState(0);
+  const reviewTrackRef = useRef<HTMLDivElement>(null);
+
+  const showReview = (index: number) => {
+    const nextIndex = (index + reviews.length) % reviews.length;
+    const track = reviewTrackRef.current;
+    const card = track?.querySelector<HTMLElement>(".review-card");
+
+    setActiveReview(nextIndex);
+    if (track && card) {
+      const gap = Number.parseFloat(getComputedStyle(track).columnGap || "0");
+      track.scrollTo({ left: nextIndex * (card.offsetWidth + gap), behavior: "smooth" });
+    }
+  };
+
   return (
-    <section className="section proof-section">
+    <section id="reviews" className="section proof-section">
       <Container>
+        <a className="proof-view-all" href="#reviews">
+          View all reviews <ArrowRight size={18} />
+        </a>
         <div className="proof-grid">
-          <div>
+          <div className="proof-intro">
             <SectionIntro
               eyebrow="Our community"
               title="Trusted by"
               accent="event organizers"
-              description="A space for stories from the people who bring events to life."
+              description="Real stories from event organizers who have used our platform to create unforgettable experiences."
             />
-            <OutlineButton href="#final-cta" size="sm">
-              Get in touch <ArrowRight size={16} />
-            </OutlineButton>
+            <div className="proof-navigation">
+              <button type="button" onClick={() => showReview(activeReview - 1)} aria-label="Previous review">
+                <ChevronLeft size={22} />
+              </button>
+              <button type="button" onClick={() => showReview(activeReview + 1)} aria-label="Next review">
+                <ChevronRight size={22} />
+              </button>
+              <span>{activeReview + 1} / {reviews.length}</span>
+            </div>
           </div>
-          <div className="proof-placeholder">
-            <Star size={28} />
-            <strong>Organizer stories coming soon</strong>
-            <p>Real experiences will appear here when available.</p>
+          <div className="review-track" ref={reviewTrackRef}>
+            {reviews.map((review) => (
+              <article className="review-card" key={review.name}>
+                <div className="review-card__header">
+                  <span className={`review-avatar review-avatar--${review.tone}`}>{review.initials}</span>
+                  <div className="review-person">
+                    <strong>{review.name}</strong>
+                    <span>Event Organizer</span>
+                  </div>
+                  <div className="review-rating" aria-label="5 out of 5 stars">
+                    <span>{Array.from({ length: 5 }, (_, index) => <Star size={14} fill="currentColor" key={index} />)}</span>
+                    <small>5.0</small>
+                  </div>
+                </div>
+                <blockquote>“{review.quote}”</blockquote>
+                <div className="review-event">
+                  <div className={`review-event__image review-event__image--${review.tone}`} aria-hidden="true">
+                    <span>{review.event}</span>
+                  </div>
+                  <div className="review-event__details">
+                    <strong>{review.event}</strong>
+                    <span><CalendarDays size={15} /> {review.date}</span>
+                    <span><MapPin size={15} /> {review.location}</span>
+                  </div>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </Container>
