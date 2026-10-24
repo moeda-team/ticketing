@@ -112,6 +112,20 @@ function Scribble({ className = "" }: { className?: string }) {
   );
 }
 
+function observeReplay(
+  target: Element,
+  timeline: gsap.core.Timeline,
+  rootMargin = "0px 0px -12% 0px",
+) {
+  const observer = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) timeline.restart();
+    else timeline.pause(0);
+  }, { rootMargin });
+
+  observer.observe(target);
+  return () => observer.disconnect();
+}
+
 function Hero() {
   const heroRef = useRef<HTMLElement>(null);
   const polaroidRefs = useRef<HTMLDivElement[]>([]);
@@ -204,19 +218,16 @@ function Hero() {
 
       // Reset every entrance property before building the timeline. This keeps
       // refreshes and React Strict Mode remounts from reusing stale transforms.
-      gsap.killTweensOf([
+      gsap.killTweensOf(hero.querySelectorAll([
         ".hero-copy",
         ".hero-art__wash",
         ".hero-art__paper--one",
         ".hero-art__paper--two",
-        ".polaroid--main",
-        ".polaroid--left",
-        ".polaroid--right",
-        ".polaroid--small",
+        ".polaroid",
         ".hero-note",
         ".hero-scribble",
         ".hero-spark",
-      ]);
+      ].join(", ")));
       gsap.set(".polaroid--main", { autoAlpha: 0, x: 0, y: -420, rotate: 12, scale: 0.88 });
       gsap.set(".polaroid--left", { autoAlpha: 0, x: -420, y: 0, rotate: -22, scale: 0.88 });
       gsap.set(".polaroid--right", { autoAlpha: 0, x: 420, y: 0, rotate: 20, scale: 0.88 });
@@ -285,6 +296,9 @@ function Hero() {
             </div>
           </div>
           <div className="hero-art" aria-label="Event photography collage">
+            <div className="hero-art__wash" aria-hidden="true" />
+            <div className="hero-art__paper hero-art__paper--one" aria-hidden="true" />
+            <div className="hero-art__paper hero-art__paper--two" aria-hidden="true" />
             <div ref={(node) => { if (node) polaroidRefs.current[0] = node; }} className="polaroid polaroid--main">
               <div className="polaroid__photo">
                 <Image
@@ -671,8 +685,41 @@ function Platform() {
 }
 
 function HowItWorks() {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const section = sectionRef.current;
+    if (!section || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let stopObserving: (() => void) | undefined;
+    const ctx = gsap.context(() => {
+      const copy = section.querySelector<HTMLElement>(".how-grid > div:first-child");
+      const steps = section.querySelectorAll<HTMLElement>(".step");
+      if (!copy || !steps.length) return;
+
+      gsap.killTweensOf([copy, ...steps]);
+      const timeline = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
+        .fromTo(copy, { autoAlpha: 0, x: -70, rotate: -2 }, { autoAlpha: 1, x: 0, rotate: 0, duration: 0.75 }, 0)
+        .fromTo(steps, { autoAlpha: 0, y: 70, scale: 0.9 }, {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.65,
+          stagger: 0.13,
+          ease: "back.out(1.15)",
+        }, 0.16);
+
+      stopObserving = observeReplay(section, timeline);
+    }, section);
+
+    return () => {
+      stopObserving?.();
+      ctx.revert();
+    };
+  }, []);
+
   return (
-    <section id="how-it-works" className="how-section">
+    <section ref={sectionRef} id="how-it-works" className="how-section">
       <Container>
         <div className="how-grid">
           <div>
@@ -710,14 +757,67 @@ function HowItWorks() {
 }
 
 function Featured() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const filters = ["All Events", "Concert", "Running", "Conference", "Workshop", "Festival"] as const;
   const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>("All Events");
   const visibleCategories = activeFilter === "All Events"
     ? categories.slice(0, 4)
     : categories.filter(({ name }) => name.includes(activeFilter));
 
+  useLayoutEffect(() => {
+    const section = sectionRef.current;
+    if (!section || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let stopObserving: (() => void) | undefined;
+    const ctx = gsap.context(() => {
+      const intro = section.querySelector<HTMLElement>(".section-intro");
+      const controls = section.querySelector<HTMLElement>(".featured-controls");
+      if (!intro || !controls) return;
+
+      gsap.killTweensOf([intro, controls]);
+      const timeline = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
+        .fromTo(intro, { autoAlpha: 0, x: -64 }, { autoAlpha: 1, x: 0, duration: 0.72 }, 0)
+        .fromTo(controls, { autoAlpha: 0, x: 64 }, { autoAlpha: 1, x: 0, duration: 0.72 }, 0.08);
+
+      stopObserving = observeReplay(section, timeline, "0px 0px -8% 0px");
+    }, section);
+
+    return () => {
+      stopObserving?.();
+      ctx.revert();
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const cards = grid.querySelectorAll<HTMLElement>(".event-tile");
+    if (!cards.length) return;
+
+    gsap.killTweensOf(cards);
+    const tween = gsap.fromTo(cards,
+      { autoAlpha: 0, y: 58, rotate: (index) => index % 2 === 0 ? -2 : 2, scale: 0.94 },
+      {
+        autoAlpha: 1,
+        y: 0,
+        rotate: 0,
+        scale: 1,
+        duration: 0.68,
+        stagger: 0.1,
+        ease: "power3.out",
+        clearProps: "transform",
+      },
+    );
+
+    return () => {
+      tween.revert();
+    };
+  }, [activeFilter]);
+
   return (
-    <section id="featured" className="section featured-section">
+    <section ref={sectionRef} id="featured" className="section featured-section">
       <Container>
         <div className="featured-header">
           <SectionIntro
@@ -745,7 +845,7 @@ function Featured() {
             </OutlineButton>
           </div>
         </div>
-        <div className="event-grid">
+        <div className="event-grid" ref={gridRef}>
           {visibleCategories.map(({ name, tone, icon: Icon }) => (
             <article className="event-tile" key={name}>
               <PhotoPlaceholder label={name} tone={tone} />
@@ -778,6 +878,7 @@ function Featured() {
 }
 
 function SocialProof() {
+  const sectionRef = useRef<HTMLElement>(null);
   const reviews = [
     {
       name: "Dimas Setiawan",
@@ -819,6 +920,38 @@ function SocialProof() {
   const [activeReview, setActiveReview] = useState(0);
   const reviewTrackRef = useRef<HTMLDivElement>(null);
 
+  useLayoutEffect(() => {
+    const section = sectionRef.current;
+    if (!section || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let stopObserving: (() => void) | undefined;
+    const ctx = gsap.context(() => {
+      const intro = section.querySelector<HTMLElement>(".proof-intro");
+      const viewAll = section.querySelector<HTMLElement>(".proof-view-all");
+      const cards = section.querySelectorAll<HTMLElement>(".review-card");
+      if (!intro || !viewAll || !cards.length) return;
+
+      gsap.killTweensOf([intro, viewAll, ...cards]);
+      const timeline = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
+        .fromTo(intro, { autoAlpha: 0, x: -72 }, { autoAlpha: 1, x: 0, duration: 0.72 }, 0)
+        .fromTo(viewAll, { autoAlpha: 0, y: -24 }, { autoAlpha: 1, y: 0, duration: 0.5 }, 0.14)
+        .fromTo(cards, { autoAlpha: 0, x: 110, rotate: 1.5 }, {
+          autoAlpha: 1,
+          x: 0,
+          rotate: 0,
+          duration: 0.72,
+          stagger: 0.11,
+        }, 0.18);
+
+      stopObserving = observeReplay(section, timeline);
+    }, section);
+
+    return () => {
+      stopObserving?.();
+      ctx.revert();
+    };
+  }, []);
+
   const showReview = (index: number) => {
     const nextIndex = (index + reviews.length) % reviews.length;
     const track = reviewTrackRef.current;
@@ -832,7 +965,7 @@ function SocialProof() {
   };
 
   return (
-    <section id="reviews" className="section proof-section">
+    <section ref={sectionRef} id="reviews" className="section proof-section">
       <Container>
         <a className="proof-view-all" href="#reviews">
           View all reviews <ArrowRight size={18} />
@@ -890,8 +1023,47 @@ function SocialProof() {
 }
 
 function Pricing() {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const section = sectionRef.current;
+    if (!section || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let stopObserving: (() => void) | undefined;
+    const ctx = gsap.context(() => {
+      const intro = section.querySelector<HTMLElement>(".section-intro");
+      const cards = section.querySelectorAll<HTMLElement>(".pricing-card");
+      if (!intro || !cards.length) return;
+
+      gsap.killTweensOf([intro, ...cards]);
+      const timeline = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
+        .fromTo(intro, { autoAlpha: 0, y: 48 }, { autoAlpha: 1, y: 0, duration: 0.68 }, 0)
+        .fromTo(cards, {
+          autoAlpha: 0,
+          y: (index) => index === 1 ? 76 : 52,
+          scale: (index) => index === 1 ? 0.86 : 0.94,
+          rotate: (index) => index === 0 ? -2 : index === 2 ? 2 : 0,
+        }, {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          rotate: 0,
+          duration: 0.72,
+          stagger: 0.13,
+          ease: "back.out(1.12)",
+        }, 0.16);
+
+      stopObserving = observeReplay(section, timeline);
+    }, section);
+
+    return () => {
+      stopObserving?.();
+      ctx.revert();
+    };
+  }, []);
+
   return (
-    <section id="pricing" className="section pricing-section">
+    <section ref={sectionRef} id="pricing" className="section pricing-section">
       <Container>
         <div className="pricing-grid">
           <SectionIntro
@@ -938,23 +1110,64 @@ function Pricing() {
 }
 
 function FinalCta() {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const section = sectionRef.current;
+    if (!section || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let stopObserving: (() => void) | undefined;
+    const ctx = gsap.context(() => {
+      const doodle = section.querySelector<SVGElement>(".cta-strip__heading > svg");
+      const heading = section.querySelector<HTMLElement>(".cta-strip h2");
+      const content = section.querySelector<HTMLElement>(".cta-strip__content");
+      if (!heading || !content) return;
+
+      gsap.killTweensOf([doodle, heading, content].filter(Boolean));
+      const timeline = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
+        .fromTo(heading, { autoAlpha: 0, x: -90 }, { autoAlpha: 1, x: 0, duration: 0.72 }, 0)
+        .fromTo(content, { autoAlpha: 0, x: 90 }, { autoAlpha: 1, x: 0, duration: 0.72 }, 0.08);
+
+      if (doodle) {
+        timeline.fromTo(doodle,
+          { autoAlpha: 0, scale: 0.45, rotate: -38 },
+          { autoAlpha: 1, scale: 1, rotate: 0, duration: 0.58, ease: "back.out(1.7)" },
+          0.34,
+        );
+      }
+
+      stopObserving = observeReplay(section, timeline, "0px 0px -6% 0px");
+    }, section);
+
+    return () => {
+      stopObserving?.();
+      ctx.revert();
+    };
+  }, []);
+
   return (
-    <section id="final-cta" className="cta-section">
+    <section ref={sectionRef} id="final-cta" className="cta-section">
       <Container>
         <div className="cta-strip">
-          <DecorativeDoodle kind="arrow" size={50} />
-          <BrushHeading>
-            Ready to launch
-            <br />
-            your next event?
-          </BrushHeading>
-          <p>Bring people together and create something unforgettable.</p>
-          <a href="#pricing">
-            Get Started <ArrowRight size={16} />
-          </a>
-          <span className="cta-contact" aria-disabled="true">
-            Contact Us
-          </span>
+          <div className="cta-strip__heading">
+            <DecorativeDoodle kind="arrow" size={50} />
+            <BrushHeading>
+              Ready to launch
+              <br />
+              your next event?
+            </BrushHeading>
+          </div>
+          <div className="cta-strip__content">
+            <p>Bring people together and create something unforgettable.</p>
+            <div className="cta-strip__actions">
+              <a href="#pricing">
+                Get Started <ArrowRight size={16} />
+              </a>
+              <span className="cta-contact" aria-disabled="true">
+                Contact Us
+              </span>
+            </div>
+          </div>
         </div>
       </Container>
     </section>
