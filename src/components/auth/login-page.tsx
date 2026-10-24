@@ -7,9 +7,11 @@ import { FormEvent, useState } from "react";
 
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [notice, setNotice] = useState("");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setNotice("Login belum tersedia. Hubungi administrator Ticketly untuk mendapatkan akses.");
   }
 
   return (
@@ -84,19 +86,21 @@ export function LoginPage() {
                 {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
               </button>
             </div>
-            <a className="login-forgot" href="#">Lupa password?</a>
+            <a className="login-forgot" href="mailto:admin@ticketly.id?subject=Bantuan%20login%20Ticketly">Lupa password?</a>
 
             <button className="login-submit" type="submit">
               Masuk <ArrowRight size={21} />
             </button>
           </form>
 
-          <div className="login-divider"><span>atau masuk dengan</span></div>
-          <button className="login-google" type="button">
+          {notice && <p className="login-notice" role="status">{notice}</p>}
+
+          <div className="login-divider"><span>akses akun</span></div>
+          <a className="login-google" href="mailto:admin@ticketly.id?subject=Permintaan%20akses%20Ticketly">
             <span className="google-mark" aria-hidden="true">G</span>
-            Masuk dengan Google
-          </button>
-          <p className="login-help">Belum punya akun? <a href="mailto:admin@ticketly.id">Hubungi administrator</a></p>
+            Minta akses administrator
+          </a>
+          <p className="login-help">Belum punya akun? <a href="mailto:admin@ticketly.id?subject=Permintaan%20akun%20Ticketly">Hubungi administrator</a></p>
         </div>
       </section>
     </main>

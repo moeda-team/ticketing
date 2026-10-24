@@ -253,6 +253,24 @@ a {
   box-shadow: 0 0 26px #d7ff432b;
 }
 .login-submit:hover { background: #e2ff75; }
+.login-submit:focus-visible,
+.login-password-toggle:focus-visible,
+.login-forgot:focus-visible,
+.login-google:focus-visible,
+.login-help a:focus-visible {
+  outline: 2px solid var(--neon-lime);
+  outline-offset: 4px;
+}
+.login-notice {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #d7ff4355;
+  border-radius: 10px;
+  color: #e8eddf;
+  background: #d7ff4310;
+  font-size: .86rem;
+  line-height: 1.5;
+}
 .login-divider {
   display: flex;
   align-items: center;
@@ -276,6 +294,7 @@ a {
   font: 500 .9rem var(--font-body);
   cursor: pointer;
 }
+.login-google:hover { border-color: #8ca72b; background: #d7ff430a; }
 .google-mark { font-size: 1.25rem; font-weight: 800; color: #4285f4; text-shadow: 1px 1px #34a853; }
 .login-help { margin: 38px 0 0; color: #aab0aa; text-align: center; font-size: .85rem; }
 .login-help a { color: var(--neon-lime); font-weight: 600; }
