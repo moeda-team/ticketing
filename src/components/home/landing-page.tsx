@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import {
@@ -67,9 +68,9 @@ function Navbar() {
           >
             <Search size={20} />
           </a>
-          <span className="header-login" aria-disabled="true">
+          <Link className="header-login" href="/login">
             Log in
-          </span>
+          </Link>
           <a className="header-start" href="#pricing">
             Get Started <ArrowRight size={16} />
           </a>
@@ -84,6 +85,7 @@ function Navbar() {
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
             <a href="#footer">Resources</a>
+            <Link href="/login">Log in</Link>
           </nav>
         </details>
       </Container>
